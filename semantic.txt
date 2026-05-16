@@ -1,0 +1,18 @@
+PHASE 3 — SEMANTIC ANALYSIS
+==================================================
+
+Symbol Table:
+  i -> int
+
+Log:
+  Declared: i (int)
+  Used 'i' -> type: int
+  Used 'i' -> type: int
+  Used 'i' -> type: int
+  '++' on 'i' -> OK
+  Used 'i' -> type: int
+
+Errors:
+  No errors found.
+
+Result: PASSED

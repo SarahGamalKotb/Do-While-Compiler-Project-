@@ -1,0 +1,12 @@
+CFG — Context Free Grammar
+==================================================
+  DoWhileStmt  -> do { StatementList } while ( Condition ) ;
+  StatementList -> Statement StatementList | epsilon
+  Statement    -> PrintfStmt | Assignment
+  Assignment   -> IDENTIFIER = Expression ; | IDENTIFIER ++ ; | IDENTIFIER -- ;
+  PrintfStmt   -> printf ( " STRING " , IDENTIFIER ) ;
+  Condition    -> Expression RelOp Expression
+  RelOp        -> < | > | == | != | <= | >=
+  Expression   -> Term | Expression + Term | Expression - Term
+  Term         -> Factor | Term * Factor | Term / Factor
+  Factor       -> IDENTIFIER | NUMBER

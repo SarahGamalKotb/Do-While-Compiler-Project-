@@ -1,0 +1,117 @@
+PHASE 2 — BOTTOM-UP PARSER (Shift-Reduce)
+==================================================
+
+Parse Steps:
+STACK (top 3)                  NEXT INPUT           ACTION
+---------------------------------------------------------------------------
+  STACK: ...do                        INPUT: {               ACTION: SHIFT  'do'
+  STACK: ...do {                      INPUT: printf          ACTION: SHIFT  '{'
+  STACK: ...do { printf               INPUT: (               ACTION: SHIFT  'printf'
+  STACK: ...{ printf (                INPUT: "               ACTION: SHIFT  '('
+  STACK: ...printf ( "                INPUT: %               ACTION: SHIFT  '"'
+  STACK: ...( " %                     INPUT: d               ACTION: SHIFT  '%'
+  STACK: ..." % d                     INPUT: \               ACTION: SHIFT  'd'
+  STACK: ..." % Factor                INPUT: \               ACTION: REDUCE 1 -> Factor -> IDENTIFIER|NUMBER
+  STACK: ..." % Term                  INPUT: \               ACTION: REDUCE 1 -> Term -> Factor
+  STACK: ..." % Expression            INPUT: \               ACTION: REDUCE 1 -> Expression -> Term
+  STACK: ...% Expression \            INPUT: n               ACTION: SHIFT  '\'
+  STACK: ...Expression \ n            INPUT: "               ACTION: SHIFT  'n'
+  STACK: ...Expression \ Factor       INPUT: "               ACTION: REDUCE 1 -> Factor -> IDENTIFIER|NUMBER
+  STACK: ...Expression \ Term         INPUT: "               ACTION: REDUCE 1 -> Term -> Factor
+  STACK: ...Expression \ Expression   INPUT: "               ACTION: REDUCE 1 -> Expression -> Term
+  STACK: ...\ Expression "            INPUT: ,               ACTION: SHIFT  '"'
+  STACK: ...Expression " ,            INPUT: i               ACTION: SHIFT  ','
+  STACK: ..." , i                     INPUT: )               ACTION: SHIFT  'i'
+  STACK: ..." , Factor                INPUT: )               ACTION: REDUCE 1 -> Factor -> IDENTIFIER|NUMBER
+  STACK: ..." , Term                  INPUT: )               ACTION: REDUCE 1 -> Term -> Factor
+  STACK: ..." , Expression            INPUT: )               ACTION: REDUCE 1 -> Expression -> Term
+  STACK: ..., Expression )            INPUT: ;               ACTION: SHIFT  ')'
+  STACK: ...Expression ) ;            INPUT: i               ACTION: SHIFT  ';'
+  STACK: ...do { PrintfStmt           INPUT: i               ACTION: REDUCE 12 -> PrintfStmt -> printf ( STRING , IDENTIFIER ) ;
+  STACK: ...do { Statement            INPUT: i               ACTION: REDUCE 1 -> Statement -> PrintfStmt|Assignment
+  STACK: ...{ Statement i             INPUT: ++              ACTION: SHIFT  'i'
+  STACK: ...Statement i ++            INPUT: ;               ACTION: SHIFT  '++'
+  STACK: ...i ++ ;                    INPUT: }               ACTION: SHIFT  ';'
+  STACK: ...{ Statement Assignment    INPUT: }               ACTION: REDUCE 3 -> Assignment -> IDENTIFIER ++/-- ;
+  STACK: ...{ Statement Statement     INPUT: }               ACTION: REDUCE 1 -> Statement -> PrintfStmt|Assignment
+  STACK: ...do { StatementList        INPUT: }               ACTION: REDUCE 2 -> StatementList -> Statement Statement
+  STACK: ...{ StatementList }         INPUT: while           ACTION: SHIFT  '}'
+  STACK: ...StatementList } while     INPUT: (               ACTION: SHIFT  'while'
+  STACK: ...} while (                 INPUT: i               ACTION: SHIFT  '('
+  STACK: ...while ( i                 INPUT: <               ACTION: SHIFT  'i'
+  STACK: ...while ( Factor            INPUT: <               ACTION: REDUCE 1 -> Factor -> IDENTIFIER|NUMBER
+  STACK: ...while ( Term              INPUT: <               ACTION: REDUCE 1 -> Term -> Factor
+  STACK: ...while ( Expression        INPUT: <               ACTION: REDUCE 1 -> Expression -> Term
+  STACK: ...( Expression <            INPUT: 5               ACTION: SHIFT  '<'
+  STACK: ...( Expression RelOp        INPUT: 5               ACTION: REDUCE 1 -> RelOp -> relational operator
+  STACK: ...Expression RelOp 5        INPUT: )               ACTION: SHIFT  '5'
+  STACK: ...Expression RelOp Factor   INPUT: )               ACTION: REDUCE 1 -> Factor -> IDENTIFIER|NUMBER
+  STACK: ...Expression RelOp Term     INPUT: )               ACTION: REDUCE 1 -> Term -> Factor
+  STACK: ...Expression RelOp Expression INPUT: )               ACTION: REDUCE 1 -> Expression -> Term
+  STACK: ...while ( Condition         INPUT: )               ACTION: REDUCE 3 -> Condition -> Expression RelOp Expression
+  STACK: ...( Condition )             INPUT: ;               ACTION: SHIFT  ')'
+  STACK: ...Condition ) ;             INPUT: EOF             ACTION: SHIFT  ';'
+  STACK: ...DoWhileStmt               INPUT: EOF             ACTION: REDUCE 9 -> DoWhileStmt -> do { StatementList } while ( Condition ) ;
+
+Syntax Tree:
+----------------------------------------
+|-- DoWhileStmt
+|   |-- Declaration
+|   |   |-- int
+|   |   |-- i
+|   |   |-- ;
+|   |-- Assignment
+|   |   |-- i
+|   |   |-- =
+|   |   |-- Expression
+|   |   |   |-- Term
+|   |   |   |   |-- Factor
+|   |   |   |   |   |-- 1
+|   |   |-- ;
+|   |-- do
+|   |-- {
+|   |-- StatementList
+|   |   |-- Statement
+|   |   |   |-- PrintfStmt
+|   |   |   |   |-- printf
+|   |   |   |   |-- (
+|   |   |   |   |-- "
+|   |   |   |   |-- %
+|   |   |   |   |-- Expression
+|   |   |   |   |   |-- Term
+|   |   |   |   |   |   |-- Factor
+|   |   |   |   |   |   |   |-- d
+|   |   |   |   |-- \
+|   |   |   |   |-- Expression
+|   |   |   |   |   |-- Term
+|   |   |   |   |   |   |-- Factor
+|   |   |   |   |   |   |   |-- n
+|   |   |   |   |-- "
+|   |   |   |   |-- ,
+|   |   |   |   |-- Expression
+|   |   |   |   |   |-- Term
+|   |   |   |   |   |   |-- Factor
+|   |   |   |   |   |   |   |-- i
+|   |   |   |   |-- )
+|   |   |   |   |-- ;
+|   |   |-- Statement
+|   |   |   |-- Assignment
+|   |   |   |   |-- i
+|   |   |   |   |-- ++
+|   |   |   |   |-- ;
+|   |-- }
+|   |-- while
+|   |-- (
+|   |-- Condition
+|   |   |-- Expression
+|   |   |   |-- Term
+|   |   |   |   |-- Factor
+|   |   |   |   |   |-- i
+|   |   |-- RelOp
+|   |   |   |-- <
+|   |   |-- Expression
+|   |   |   |-- Term
+|   |   |   |   |-- Factor
+|   |   |   |   |   |-- 5
+|   |-- )
+|   |-- ;

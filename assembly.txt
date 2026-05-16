@@ -1,0 +1,40 @@
+; ============================================
+; Assembly — Do-While Compiler Project
+; ============================================
+
+section .data
+    fmt db "%d", 10, 0
+
+section .bss
+    i resd 1          ; int i
+
+section .text
+    global main
+    extern printf
+
+main:
+    ; i = 1
+    mov eax, 1
+    mov [i], eax
+
+do_loop:
+    ; printf("%d\n", i)
+    mov eax, [i]
+    push eax
+    push fmt
+    call printf
+    add esp, 8
+
+    ; i++
+    mov eax, [i]
+    add eax, 1
+    mov [i], eax
+
+    ; while (i < 5)
+    mov eax, [i]
+    cmp eax, 5
+    jl  do_loop
+
+    ; exit
+    mov eax, 0
+    ret

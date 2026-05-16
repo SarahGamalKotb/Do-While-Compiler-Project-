@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Do-While Compiler — Team 24 | CET313</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:      #070B0F;
+  --surface: #0D1117;
+  --card:    #161B22;
+  --border:  #21262D;
+  --blue:    #58A6FF;
+  --green:   #3FB950;
+  --yellow:  #E3B341;
+  --purple:  #BC8CFF;
+  --red:     #F85149;
+  --muted:   #8B949E;
+  --white:   #F0F6FC;
+  --font-code: 'JetBrains Mono', monospace;
+  --font-ui:   'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ─────────────────────────────────────────────────────────── */
+header {
+  position: relative;
+  padding: 100px 5vw 80px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+.header-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: .35;
+  pointer-events: none;
+}
+.header-glow {
+  position: absolute;
+  top: -80px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px; height: 400px;
+  background: radial-gradient(ellipse, rgba(88,166,255,.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-inner { position: relative; max-width: 1100px; margin: auto; }
+.tag-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+.tag {
+  font-family: var(--font-code); font-size: 11px; font-weight: 600;
+  padding: 4px 12px; border-radius: 20px;
+  border: 1px solid;
+}
+.tag-blue   { color: var(--blue);   border-color: var(--blue);   background: rgba(88,166,255,.08); }
+.tag-yellow { color: var(--yellow); border-color: var(--yellow); background: rgba(227,179,65,.08); }
+.tag-green  { color: var(--green);  border-color: var(--green);  background: rgba(63,185,80,.08); }
+
+h1 {
+  font-size: clamp(36px, 6vw, 72px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -2px;
+}
+h1 span { color: var(--blue); }
+
+.subtitle {
+  margin-top: 16px;
+  font-family: var(--font-code);
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 560px;
+}
+
+.team-pills {
+  margin-top: 36px;
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.team-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 40px;
+  padding: 7px 16px;
+  font-size: 13px;
+}
+.team-pill .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+}
+
+/* ── NAV ─────────────────────────────────────────────────────────────── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(7,11,15,.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex; gap: 0; overflow-x: auto;
+  padding: 0 5vw;
+}
+nav a {
+  display: inline-block;
+  padding: 14px 20px;
+  font-family: var(--font-code);
+  font-size: 12px; font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color .2s;
+  border-bottom: 2px solid transparent;
+}
+nav a:hover { color: var(--white); }
+nav a.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* ── MAIN ─────────────────────────────────────────────────────────────── */
+main { max-width: 1100px; margin: auto; padding: 60px 5vw 120px; }
+
+section { margin-bottom: 80px; scroll-margin-top: 70px; }
+
+.section-header {
+  display: flex; align-items: baseline; gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.section-num {
+  font-family: var(--font-code); font-size: 11px; font-weight: 700;
+  color: var(--blue); letter-spacing: 3px; text-transform: uppercase;
+}
+.section-title {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+}
+
+/* ── PHASE PIPELINE ──────────────────────────────────────────────────── */
+.pipeline {
+  display: flex; align-items: center; gap: 0;
+  overflow-x: auto; padding-bottom: 8px; margin-bottom: 40px;
+}
+.phase-box {
+  flex-shrink: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  min-width: 130px;
+  position: relative;
+  transition: border-color .2s, transform .2s;
+  cursor: default;
+}
+.phase-box:hover { border-color: var(--blue); transform: translateY(-3px); }
+.phase-num {
+  font-family: var(--font-code); font-size: 10px;
+  font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.phase-name {
+  font-weight: 700; font-size: 14px; line-height: 1.3;
+}
+.phase-arrow {
+  flex-shrink: 0;
+  color: var(--border); font-size: 22px;
+  padding: 0 6px;
+  align-self: center;
+}
+
+/* ── CARDS / TABLES ───────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.card-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-code); font-size: 12px; font-weight: 600;
+  color: var(--muted);
+}
+.card-header .dot { width: 10px; height: 10px; border-radius: 50%; }
+.card-body { padding: 20px; }
+
+/* code block */
+.code-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.code-top {
+  display: flex; align-items: center;
+  padding: 10px 16px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+.code-dots { display: flex; gap: 6px; }
+.code-dots span {
+  width: 11px; height: 11px; border-radius: 50%;
+}
+.code-label {
+  margin-left: 12px;
+  font-family: var(--font-code); font-size: 11px;
+  color: var(--muted);
+}
+pre {
+  padding: 20px;
+  font-family: var(--font-code);
+  font-size: 12.5px;
+  line-height: 1.65;
+  overflow-x: auto;
+  tab-size: 4;
+}
+
+/* token table */
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+.token-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+.token-table td {
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(33,38,45,.6);
+}
+.token-table tr:last-child td { border-bottom: none; }
+.token-table tr:hover td { background: rgba(88,166,255,.04); }
+.tok-kw   { color: var(--blue); }
+.tok-id   { color: var(--green); }
+.tok-op   { color: var(--yellow); }
+.tok-sep  { color: var(--purple); }
+.tok-num  { color: var(--red); }
+
+/* tree */
+.tree-wrap {
+  font-family: var(--font-code); font-size: 12px;
+  line-height: 1.8;
+  padding: 20px;
+  overflow-x: auto;
+}
+.t-root   { color: var(--blue); font-weight: 700; }
+.t-nt     { color: var(--green); }
+.t-term   { color: var(--yellow); }
+.t-kw     { color: var(--blue); }
+
+/* cfg grid */
+.cfg-grid { display: grid; gap: 10px; }
+.cfg-rule {
+  display: grid; grid-template-columns: 200px 1fr;
+  gap: 16px; align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font-code); font-size: 12px;
+}
+.cfg-lhs { color: var(--purple); font-weight: 700; }
+.cfg-rhs { color: var(--white); }
+.cfg-rhs .arrow { color: var(--muted); }
+.cfg-rhs .t  { color: var(--yellow); }
+.cfg-rhs .nt { color: var(--green); }
+.cfg-rhs .ep { color: var(--muted); font-style: italic; }
+
+/* semantic result */
+.result-passed {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 10px 20px; border-radius: 8px;
+  background: rgba(63,185,80,.1);
+  border: 1px solid var(--green);
+  color: var(--green);
+  font-family: var(--font-code); font-size: 13px; font-weight: 700;
+}
+.check-list { display: grid; gap: 8px; margin-top: 16px; }
+.check-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.check-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* assembly highlight */
+.asm .c-comment { color: var(--muted); }
+.asm .c-section { color: var(--purple); }
+.asm .c-label   { color: var(--blue); font-weight: 700; }
+.asm .c-instr   { color: var(--green); }
+.asm .c-call    { color: var(--yellow); }
+
+/* team grid */
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+.member-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.member-card:hover { border-color: var(--blue); }
+.member-accent { height: 4px; }
+.member-body { padding: 24px; }
+.member-name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+.member-id {
+  font-family: var(--font-code); font-size: 11px;
+  color: var(--muted); margin-bottom: 16px;
+}
+.member-tasks { list-style: none; display: grid; gap: 6px; }
+.member-tasks li {
+  display: flex; gap: 10px; align-items: flex-start;
+  font-size: 13px; line-height: 1.5;
+  color: rgba(240,246,252,.75);
+}
+.task-dot {
+  flex-shrink: 0;
+  width: 6px; height: 6px; border-radius: 50%;
+  margin-top: 7px;
+}
+
+/* parse steps table */
+.parse-table {
+  width: 100%; border-collapse: collapse;
+  font-family: var(--font-code); font-size: 11.5px;
+}
+.parse-table th {
+  padding: 8px 14px; text-align: left;
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--border);
+}
+.parse-table td {
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(33,38,45,.5);
+}
+.parse-table tr:last-child td { border-bottom: none; }
+.parse-shift  { color: var(--blue); }
+.parse-reduce { color: var(--green); }
+
+/* footer */
+footer {
+  border-top: 1px solid var(--border);
+  text-align: center;
+  padding: 36px 5vw;
+  font-family: var(--font-code); font-size: 11px;
+  color: var(--muted);
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ HEADER ═══════ -->
+<header>
+  <div class="header-grid"></div>
+  <div class="header-glow"></div>
+  <div class="header-inner">
+    <div class="tag-row">
+      <span class="tag tag-blue">CET313 · Theory of Computing</span>
+      <span class="tag tag-yellow">Spring 2026</span>
+      <span class="tag tag-green">Team 24</span>
+    </div>
+    <h1>Do-While<br><span>Compiler</span><br>Project</h1>
+    <p class="subtitle">
+      A full 4-phase compiler pipeline: Lexer → CFG → Shift-Reduce Parser
+      → Semantic Analyzer → x86 Assembly Generator
+    </p>
+    <div class="team-pills">
+      <div class="team-pill">
+        <span class="dot" style="background:#58A6FF"></span>
+        Sarah Gamal Mohamed <span style="color:var(--muted);margin-left:4px;font-family:var(--font-code);font-size:11px">230104240</span>
+      </div>
+      <div class="team-pill">
+        <span class="dot" style="background:#3FB950"></span>
+        Ahd Mohamed Elazeb <span style="color:var(--muted);margin-left:4px;font-family:var(--font-code);font-size:11px">230105494</span>
+      </div>
+      <div class="team-pill">
+        <span class="dot" style="background:#BC8CFF"></span>
+        Battol Mohamed Galal <span style="color:var(--muted);margin-left:4px;font-family:var(--font-code);font-size:11px">240102737</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════ NAV ═══════ -->
+<nav>
+  <a href="#overview" class="active">Overview</a>
+  <a href="#phase1">Phase 1 — Lexer</a>
+  <a href="#cfg">CFG</a>
+  <a href="#phase2">Phase 2 — Parser</a>
+  <a href="#phase3">Phase 3 — Semantic</a>
+  <a href="#phase4">Phase 4 — Assembly</a>
+  <a href="#team">Team</a>
+</nav>
+
+<!-- ═══════ MAIN ═══════ -->
+<main>
+
+  <!-- ── OVERVIEW ── -->
+  <section id="overview">
+    <div class="section-header">
+      <span class="section-num">00</span>
+      <span class="section-title">Compiler Pipeline</span>
+    </div>
+
+    <div class="pipeline">
+      <div class="phase-box" style="border-color:rgba(88,166,255,.4)">
+        <div class="phase-num" style="color:var(--blue)">Phase 01</div>
+        <div class="phase-name">Lexical<br>Analyzer</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-box" style="border-color:rgba(188,140,255,.4)">
+        <div class="phase-num" style="color:var(--purple)">CFG</div>
+        <div class="phase-name">Grammar<br>Design</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-box" style="border-color:rgba(63,185,80,.4)">
+        <div class="phase-num" style="color:var(--green)">Phase 02</div>
+        <div class="phase-name">Syntax<br>Analyzer</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-box" style="border-color:rgba(227,179,65,.4)">
+        <div class="phase-num" style="color:var(--yellow)">Phase 03</div>
+        <div class="phase-name">Semantic<br>Analyzer</div>
+      </div>
+      <div class="phase-arrow">→</div>
+      <div class="phase-box" style="border-color:rgba(248,81,73,.4)">
+        <div class="phase-num" style="color:var(--red)">Phase 04</div>
+        <div class="phase-name">Assembly<br>Generator</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-top">
+        <div class="code-dots">
+          <span style="background:#F85149"></span>
+          <span style="background:#E3B341"></span>
+          <span style="background:#3FB950"></span>
+        </div>
+        <span class="code-label">code.txt — Input Source Code</span>
+      </div>
+      <pre><span style="color:var(--blue)">int</span> <span style="color:var(--green)">i</span>;
+<span style="color:var(--green)">i</span> <span style="color:var(--yellow)">=</span> <span style="color:var(--red)">1</span>;
+
+<span style="color:var(--blue)">do</span> <span style="color:var(--purple)">{</span>
+    <span style="color:var(--blue)">printf</span><span style="color:var(--purple)">(</span><span style="color:var(--yellow)">"%d\n"</span>, <span style="color:var(--green)">i</span><span style="color:var(--purple)">)</span>;
+    <span style="color:var(--green)">i</span><span style="color:var(--yellow)">++</span>;
+<span style="color:var(--purple)">}</span>
+<span style="color:var(--blue)">while</span> <span style="color:var(--purple)">(</span><span style="color:var(--green)">i</span> <span style="color:var(--yellow)">&lt;</span> <span style="color:var(--red)">5</span><span style="color:var(--purple)">)</span>;</pre>
+    </div>
+  </section>
+
+  <!-- ── PHASE 1 ── -->
+  <section id="phase1">
+    <div class="section-header">
+      <span class="section-num" style="color:var(--blue)">01</span>
+      <span class="section-title">Lexical Analyzer — Tokenizer</span>
+    </div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px">
+      Reads source characters one by one and groups them into classified tokens.
+      Handles keywords, identifiers, numbers, operators (including two-char like <code style="font-family:var(--font-code);color:var(--yellow)">++</code>),
+      separators, and string literal content.
+    </p>
+    <div class="card">
+      <div class="card-header">
+        <span class="dot" style="background:var(--blue)"></span>
+        lexeme_table.txt — 32 tokens
+      </div>
+      <div style="overflow-x:auto">
+        <table class="token-table">
+          <thead><tr><th>#</th><th>Lexeme</th><th>Token Type</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td class="tok-kw">int</td><td class="tok-kw">KEYWORD</td></tr>
+            <tr><td>2</td><td class="tok-id">i</td><td class="tok-id">IDENTIFIER</td></tr>
+            <tr><td>3</td><td class="tok-sep">;</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>4</td><td class="tok-id">i</td><td class="tok-id">IDENTIFIER</td></tr>
+            <tr><td>5</td><td class="tok-op">=</td><td class="tok-op">OPERATOR</td></tr>
+            <tr><td>6</td><td class="tok-num">1</td><td class="tok-num">NUMBER</td></tr>
+            <tr><td>7</td><td class="tok-sep">;</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>8</td><td class="tok-kw">do</td><td class="tok-kw">KEYWORD</td></tr>
+            <tr><td>9</td><td class="tok-sep">{</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>10</td><td class="tok-kw">printf</td><td class="tok-kw">KEYWORD</td></tr>
+            <tr><td>11</td><td class="tok-sep">(</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>12</td><td class="tok-sep">"</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>13</td><td class="tok-sep">%</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>14</td><td class="tok-id">d</td><td class="tok-id">IDENTIFIER</td></tr>
+            <tr><td>15</td><td class="tok-sep">\</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>16</td><td class="tok-id">n</td><td class="tok-id">IDENTIFIER</td></tr>
+            <tr><td>17</td><td class="tok-sep">"</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>18</td><td class="tok-sep">,</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>19</td><td class="tok-id">i</td><td class="tok-id">IDENTIFIER</td></tr>
+            <tr><td>20</td><td class="tok-sep">)</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>21</td><td class="tok-sep">;</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>22</td><td class="tok-id">i</td><td class="tok-id">IDENTIFIER</td></tr>
+            <tr><td>23</td><td class="tok-op">++</td><td class="tok-op">OPERATOR</td></tr>
+            <tr><td>24</td><td class="tok-sep">;</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>25</td><td class="tok-sep">}</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>26</td><td class="tok-kw">while</td><td class="tok-kw">KEYWORD</td></tr>
+            <tr><td>27</td><td class="tok-sep">(</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>28</td><td class="tok-id">i</td><td class="tok-id">IDENTIFIER</td></tr>
+            <tr><td>29</td><td class="tok-op">&lt;</td><td class="tok-op">OPERATOR</td></tr>
+            <tr><td>30</td><td class="tok-num">5</td><td class="tok-num">NUMBER</td></tr>
+            <tr><td>31</td><td class="tok-sep">)</td><td class="tok-sep">SEPARATOR</td></tr>
+            <tr><td>32</td><td class="tok-sep">;</td><td class="tok-sep">SEPARATOR</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CFG ── -->
+  <section id="cfg">
+    <div class="section-header">
+      <span class="section-num" style="color:var(--purple)">CFG</span>
+      <span class="section-title">Context Free Grammar</span>
+    </div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px">
+      Defines the formal grammar for the Do-While statement.
+      Non-terminals (green) represent structural components; terminals (yellow) are actual tokens.
+    </p>
+    <div class="cfg-grid">
+      <div class="cfg-rule">
+        <span class="cfg-lhs">DoWhileStmt</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="t">do { </span><span class="nt">StatementList</span><span class="t"> } while ( </span><span class="nt">Condition</span><span class="t"> ) ;</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">StatementList</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="nt">Statement StatementList</span><span class="t"> | </span><span class="ep">ε</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">Statement</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="nt">PrintfStmt</span><span class="t"> | </span><span class="nt">Assignment</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">Assignment</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="t">IDENTIFIER = </span><span class="nt">Expression</span><span class="t"> ; | IDENTIFIER ++ ; | IDENTIFIER -- ;</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">PrintfStmt</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="t">printf ( " STRING " , IDENTIFIER ) ;</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">Condition</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="nt">Expression</span><span class="t"> </span><span class="nt">RelOp</span><span class="t"> </span><span class="nt">Expression</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">RelOp</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="t">&lt; | &gt; | == | != | &lt;= | &gt;=</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">Expression</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="nt">Term</span><span class="t"> | </span><span class="nt">Expression</span><span class="t"> + </span><span class="nt">Term</span><span class="t"> | </span><span class="nt">Expression</span><span class="t"> - </span><span class="nt">Term</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">Term</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="nt">Factor</span><span class="t"> | </span><span class="nt">Term</span><span class="t"> * </span><span class="nt">Factor</span><span class="t"> | </span><span class="nt">Term</span><span class="t"> / </span><span class="nt">Factor</span></span>
+      </div>
+      <div class="cfg-rule">
+        <span class="cfg-lhs">Factor</span>
+        <span class="cfg-rhs"><span class="arrow">→ </span><span class="t">IDENTIFIER | NUMBER</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PHASE 2 ── -->
+  <section id="phase2">
+    <div class="section-header">
+      <span class="section-num" style="color:var(--green)">02</span>
+      <span class="section-title">Syntax Analyzer — Bottom-Up Shift-Reduce Parser</span>
+    </div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px">
+      Processes the token stream using two operations: <strong style="color:var(--blue)">SHIFT</strong> (push token onto stack)
+      and <strong style="color:var(--green)">REDUCE</strong> (replace stack top matching a rule with a non-terminal).
+      Goal: reduce everything to <code style="font-family:var(--font-code);color:var(--purple)">DoWhileStmt</code>.
+    </p>
+
+    <div class="card" style="margin-bottom:28px">
+      <div class="card-header">
+        <span class="dot" style="background:var(--green)"></span>
+        Parse Steps (key steps shown)
+      </div>
+      <div style="overflow-x:auto">
+        <table class="parse-table">
+          <thead><tr><th>Stack Top (3)</th><th>Next Input</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>(empty)</td><td>do</td><td class="parse-shift">SHIFT 'do'</td></tr>
+            <tr><td>do {</td><td>printf</td><td class="parse-shift">SHIFT '{'</td></tr>
+            <tr><td>do { printf</td><td>(</td><td class="parse-shift">SHIFT 'printf'</td></tr>
+            <tr><td>...d</td><td>\</td><td class="parse-reduce">REDUCE 1 → Factor → IDENTIFIER</td></tr>
+            <tr><td>...Factor</td><td>\</td><td class="parse-reduce">REDUCE 1 → Term → Factor</td></tr>
+            <tr><td>...Term</td><td>\</td><td class="parse-reduce">REDUCE 1 → Expression → Term</td></tr>
+            <tr><td>...Expression ) ;</td><td>i</td><td class="parse-reduce">REDUCE 12 → PrintfStmt</td></tr>
+            <tr><td>...{ PrintfStmt</td><td>i</td><td class="parse-reduce">REDUCE 1 → Statement</td></tr>
+            <tr><td>...i ++ ;</td><td>}</td><td class="parse-reduce">REDUCE 3 → Assignment</td></tr>
+            <tr><td>...{ StatementList</td><td>}</td><td class="parse-reduce">REDUCE 2 → StatementList</td></tr>
+            <tr><td>...( Condition )</td><td>;</td><td class="parse-shift">SHIFT ')'</td></tr>
+            <tr><td>...DoWhileStmt</td><td>EOF</td><td class="parse-reduce">REDUCE 9 → DoWhileStmt ✓</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="dot" style="background:var(--purple)"></span>
+        syntax_tree.txt — Abstract Syntax Tree
+      </div>
+      <div class="tree-wrap">
+<span class="t-root">|-- DoWhileStmt</span>
+<span class="t-nt">|   |-- Declaration</span>
+<span class="t-term">|   |   |-- int  |-- i  |-- ;</span>
+<span class="t-nt">|   |-- Assignment</span>  <span style="color:var(--muted)">(i = 1)</span>
+<span class="t-term">|   |   |-- i  |-- =</span>
+<span class="t-nt">|   |   |-- Expression → Term → Factor</span>
+<span class="t-term">|   |   |   |-- 1</span>
+<span class="t-kw">|   |-- do   |-- {</span>
+<span class="t-nt">|   |-- StatementList</span>
+<span class="t-nt">|   |   |-- Statement</span>
+<span class="t-nt">|   |   |   |-- PrintfStmt</span>
+<span class="t-term">|   |   |   |   |-- printf  (  "  %  d  \  n  "  ,</span>
+<span class="t-nt">|   |   |   |   |-- Expression → Term → Factor</span>
+<span class="t-term">|   |   |   |   |   |-- i</span>
+<span class="t-term">|   |   |   |   |-- )  ;</span>
+<span class="t-nt">|   |   |-- Statement</span>
+<span class="t-nt">|   |   |   |-- Assignment</span>  <span style="color:var(--muted)">(i++)</span>
+<span class="t-term">|   |   |   |   |-- i  |-- ++  |-- ;</span>
+<span class="t-kw">|   |-- }   |-- while   |-- (</span>
+<span class="t-nt">|   |-- Condition</span>
+<span class="t-nt">|   |   |-- Expression → Term → Factor</span>
+<span class="t-term">|   |   |   |-- i</span>
+<span class="t-nt">|   |   |-- RelOp</span>
+<span class="t-term">|   |   |   |-- &lt;</span>
+<span class="t-nt">|   |   |-- Expression → Term → Factor</span>
+<span class="t-term">|   |   |   |-- 5</span>
+<span class="t-kw">|   |-- )   |-- ;</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PHASE 3 ── -->
+  <section id="phase3">
+    <div class="section-header">
+      <span class="section-num" style="color:var(--yellow)">03</span>
+      <span class="section-title">Semantic Analyzer</span>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div class="result-passed">✓ &nbsp; Result: PASSED — No errors found</div>
+    </div>
+
+    <div class="check-list">
+      <div class="check-item">
+        <span class="check-icon" style="color:var(--green)">✓</span>
+        <div>
+          <strong>Symbol Table Built</strong>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px">
+            Found declaration <code style="font-family:var(--font-code);color:var(--yellow)">int i;</code> → Symbol Table: <code style="font-family:var(--font-code);color:var(--green)">{ i → int }</code>
+          </div>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon" style="color:var(--green)">✓</span>
+        <div>
+          <strong>All Identifiers Declared</strong>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px">
+            <code style="font-family:var(--font-code)">i</code> is used 4 times — all valid.
+            No undeclared variables found.
+          </div>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon" style="color:var(--green)">✓</span>
+        <div>
+          <strong>Increment Operator Valid</strong>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px">
+            <code style="font-family:var(--font-code)">i++</code> — <code style="font-family:var(--font-code)">i</code> is declared → OK
+          </div>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon" style="color:var(--green)">✓</span>
+        <div>
+          <strong>No Division by Zero</strong>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px">
+            No <code style="font-family:var(--font-code)">/ 0</code> found in any expression.
+          </div>
+        </div>
+      </div>
+      <div class="check-item">
+        <span class="check-icon" style="color:var(--green)">✓</span>
+        <div>
+          <strong>String Literal Scope Guard</strong>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px">
+            Characters inside <code style="font-family:var(--font-code)">"%d\n"</code> — such as <code style="font-family:var(--font-code)">d</code> and <code style="font-family:var(--font-code)">n</code> — are skipped during semantic checks.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── PHASE 4 ── -->
+  <section id="phase4">
+    <div class="section-header">
+      <span class="section-num" style="color:var(--red)">04</span>
+      <span class="section-title">Assembly Code Generator (x86 NASM)</span>
+    </div>
+    <p style="color:var(--muted);font-size:14px;margin-bottom:24px">
+      Dynamically reads variable names, initial values, and the comparison operator
+      from the lexeme table — not hardcoded. Works for any valid do-while input.
+    </p>
+    <div class="code-block">
+      <div class="code-top">
+        <div class="code-dots">
+          <span style="background:#F85149"></span>
+          <span style="background:#E3B341"></span>
+          <span style="background:#3FB950"></span>
+        </div>
+        <span class="code-label">assembly.txt</span>
+      </div>
+      <pre class="asm"><span class="c-comment">; ============================================</span>
+<span class="c-comment">; Assembly — Do-While Compiler Project</span>
+<span class="c-comment">; ============================================</span>
+
+<span class="c-section">section .data</span>
+    fmt db <span style="color:var(--yellow)">"%d"</span>, 10, 0
+
+<span class="c-section">section .bss</span>
+    i resd 1          <span class="c-comment">; int i</span>
+
+<span class="c-section">section .text</span>
+    global main
+    extern printf
+
+<span class="c-label">main:</span>
+    <span class="c-comment">; i = 1</span>
+    <span class="c-instr">mov</span> eax, 1
+    <span class="c-instr">mov</span> [i], eax
+
+<span class="c-label">do_loop:</span>
+    <span class="c-comment">; printf("%d\n", i)</span>
+    <span class="c-instr">mov</span> eax, [i]
+    <span class="c-instr">push</span> eax
+    <span class="c-instr">push</span> fmt
+    <span class="c-call">call printf</span>
+    <span class="c-instr">add</span> esp, 8
+
+    <span class="c-comment">; i++</span>
+    <span class="c-instr">mov</span> eax, [i]
+    <span class="c-instr">add</span> eax, 1
+    <span class="c-instr">mov</span> [i], eax
+
+    <span class="c-comment">; while (i &lt; 5)</span>
+    <span class="c-instr">mov</span> eax, [i]
+    <span class="c-instr">cmp</span> eax, 5
+    <span style="color:var(--yellow)">jl</span>  do_loop
+
+    <span class="c-comment">; exit</span>
+    <span class="c-instr">mov</span> eax, 0
+    <span class="c-instr">ret</span></pre>
+    </div>
+  </section>
+
+  <!-- ── TEAM ── -->
+  <section id="team">
+    <div class="section-header">
+      <span class="section-num">Team</span>
+      <span class="section-title">Responsibilities</span>
+    </div>
+    <div class="team-grid">
+      <div class="member-card">
+        <div class="member-accent" style="background:var(--blue)"></div>
+        <div class="member-body">
+          <div class="member-name">Sarah Gamal Mohamed</div>
+          <div class="member-id">ID: 230104240</div>
+          <ul class="member-tasks">
+            <li><span class="task-dot" style="background:var(--blue)"></span>Lexical Analyzer (Phase 1) — full tokenizer</li>
+            <li><span class="task-dot" style="background:var(--blue)"></span>CFG design for Do-While</li>
+            <li><span class="task-dot" style="background:var(--blue)"></span>Code integration, testing, and file I/O</li>
+          </ul>
+        </div>
+      </div>
+      <div class="member-card">
+        <div class="member-accent" style="background:var(--green)"></div>
+        <div class="member-body">
+          <div class="member-name">Ahd Mohamed Elazeb</div>
+          <div class="member-id">ID: 230105494</div>
+          <ul class="member-tasks">
+            <li><span class="task-dot" style="background:var(--green)"></span>Shift-Reduce parser logic</li>
+            <li><span class="task-dot" style="background:var(--green)"></span>try_reduce() with all grammar rules</li>
+            <li><span class="task-dot" style="background:var(--green)"></span>Syntax tree builder and parse log</li>
+          </ul>
+        </div>
+      </div>
+      <div class="member-card">
+        <div class="member-accent" style="background:var(--purple)"></div>
+        <div class="member-body">
+          <div class="member-name">Battol Mohamed Galal</div>
+          <div class="member-id">ID: 240102737</div>
+          <ul class="member-tasks">
+            <li><span class="task-dot" style="background:var(--purple)"></span>Semantic analyzer — symbol table + checks</li>
+            <li><span class="task-dot" style="background:var(--purple)"></span>Assembly code generator (dynamic)</li>
+            <li><span class="task-dot" style="background:var(--purple)"></span>Report, presentation, and website</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  CET313 — Theory of Computing &nbsp;|&nbsp; Faculty of Engineering Technology &nbsp;|&nbsp; Spring 2026 &nbsp;|&nbsp; Team 24
+</footer>
+
+<script>
+// Active nav link on scroll
+const sections = document.querySelectorAll('section[id]');
+const navLinks  = document.querySelectorAll('nav a');
+const observer  = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const active = document.querySelector(`nav a[href="#${e.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+PHASE 1 — LEXEME TABLE
+==================================================
+#     Lexeme               Token
+----------------------------------------
+1     int                  KEYWORD
+2     i                    IDENTIFIER
+3     ;                    SEPARATOR
+4     i                    IDENTIFIER
+5     =                    OPERATOR
+6     1                    NUMBER
+7     ;                    SEPARATOR
+8     do                   KEYWORD
+9     {                    SEPARATOR
+10    printf               KEYWORD
+11    (                    SEPARATOR
+12    "                    SEPARATOR
+13    %                    SEPARATOR
+14    d                    IDENTIFIER
+15    \                    SEPARATOR
+16    n                    IDENTIFIER
+17    "                    SEPARATOR
+18    ,                    SEPARATOR
+19    i                    IDENTIFIER
+20    )                    SEPARATOR
+21    ;                    SEPARATOR
+22    i                    IDENTIFIER
+23    ++                   OPERATOR
+24    ;                    SEPARATOR
+25    }                    SEPARATOR
+26    while                KEYWORD
+27    (                    SEPARATOR
+28    i                    IDENTIFIER
+29    <                    OPERATOR
+30    5                    NUMBER
+31    )                    SEPARATOR
+32    ;                    SEPARATOR
